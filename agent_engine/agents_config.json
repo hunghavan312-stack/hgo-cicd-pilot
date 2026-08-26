@@ -1,0 +1,49 @@
+{
+  "agents": [
+    {
+      "id": "cicd_validate_nodes",
+      "name": "HGO.CICD.02.VALIDATE_NODES v0.2",
+      "kind": "python_script",
+      "capabilities": ["kiểm tra tên node", "kiểm tra phần bắt buộc"],
+      "description": "Soát tên node + 3 phần bắt buộc. exit 0=PASS, 1=FAIL.",
+      "endpoint": "scripts/validate_nodes.py",
+      "args": []
+    },
+    {
+      "id": "cicd_build_index",
+      "name": "HGO.CICD.03.BUILD_INDEX v0.2",
+      "kind": "python_script",
+      "capabilities": ["sinh chỉ mục tất định"],
+      "description": "Sinh HGO_INDEX.md tất định.",
+      "endpoint": "scripts/build_index.py",
+      "args": ["--output", "HGO_INDEX.md"]
+    },
+    {
+      "id": "cicd_check_index_links",
+      "name": "HGO.CICD.05.CHECK_INDEX_LINKS v0.2",
+      "kind": "python_script",
+      "capabilities": ["soát liên kết gãy", "soát node mồ côi"],
+      "description": "Soát liên kết gãy + node mồ côi.",
+      "endpoint": "scripts/check_index_links.py",
+      "args": ["--index", "HGO_INDEX.md"]
+    },
+    {
+      "id": "cicd_sync_to_drive",
+      "name": "HGO.CICD.04.SYNC_TO_DRIVE v0.2 (luôn dry-run qua Engine)",
+      "kind": "python_script",
+      "capabilities": ["sync_drive", "đồng bộ Drive"],
+      "description": "Liệt kê file sẽ đồng bộ — Engine ép cứng --dry-run.",
+      "endpoint": "scripts/sync_to_drive.py",
+      "args": []
+    },
+    {
+      "id": "cicd_gate_runner",
+      "name": "HGO-CICD-DRY-RUN-001 Gate Runner",
+      "kind": "python_script",
+      "capabilities": ["chạy toàn bộ gate 8 ca DR-01..DR-08"],
+      "description": "Chạy toàn bộ Gate 8 ca. Xóa & sinh lại reports/ + HGO_INDEX.md.",
+      "endpoint": "scripts/gate_runner.py",
+      "args": []
+    }
+  ]
+}

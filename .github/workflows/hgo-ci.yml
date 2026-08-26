@@ -1,0 +1,76 @@
+# HGO CI/CD PIPELINE — GitHub Actions
+# Node: HGO.CICD.01.PIPELINE_CORE — DRAFT v0.2
+# Thứ tự chuẩn v0.2: validate → build_index → check_links → sync --dry-run → artifacts
+# Nguyên tắc khóa: không thể kiểm tra một chỉ mục trước khi chỉ mục ấy được sinh ra.
+#
+# ĐÃ NỐI QUA HGO.AGENT_ENGINE.00: thay vì gọi từng script CICD trực tiếp,
+# job này gọi run_ci_via_engine.py — dùng Agent Engine (agent_engine/) để
+# chạy gate_runner.py (chính là 8 ca DR-01..DR-08 gộp sẵn). Lợi ích thêm:
+#   - agent_engine_task_log.json ghi lại Task đã chạy, cache theo commit SHA
+#     nên workflow_dispatch bấm lại / job retry trên CÙNG commit không chạy
+#     lại Gate — tiết kiệm runner-minutes, không đổi kết quả vì dedup_key
+#     là chính commit SHA đó.
+#   - Nếu code/node đổi (SHA khác) -> cache miss -> chạy lại như bình thường.
+name: HGO CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hgo-cicd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-build:
+    name: Validate, Build and Audit HGO (qua Agent Engine)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+      # Cache Task log theo đúng commit SHA — không dùng restore-keys rộng
+      # hơn, để tránh vô tình dùng nhầm cache của commit khác (an toàn hơn
+      # tốc độ). Chỉ khớp cache khi chạy lại CHÍNH commit này.
+      - name: Restore Agent Engine task log (dedup theo commit SHA)
+        uses: actions/cache@v4
+        with:
+          path: agent_engine_task_log.json
+          key: hgo-agent-engine-tasklog-${{ github.sha }}
+
+      - name: Run HGO CICD Gate via Agent Engine
+        run: python run_ci_via_engine.py
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgo-cicd-audit-${{ github.run_number }}
+          path: |
+            HGO_INDEX.md
+            reports/
+            agent_engine_task_log.json
+          if-no-files-found: warn
+          retention-days: 14
+
