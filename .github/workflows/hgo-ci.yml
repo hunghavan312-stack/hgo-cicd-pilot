@@ -56,7 +56,10 @@ jobs:
       - name: Restore Agent Engine task log (dedup theo commit SHA)
         uses: actions/cache@v4
         with:
-          path: agent_engine_task_log.json
+          path: |
+            agent_engine_task_log.json
+            HGO_INDEX.md
+            reports/
           key: hgo-agent-engine-tasklog-${{ github.sha }}
 
       - name: Run HGO CICD Gate via Agent Engine
